@@ -24,8 +24,47 @@
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
   const fmt = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  // Analytics hook: no-op unless you add a pixel (window.fbq) yourself.
-  const track = (...a) => { try { window.fbq && window.fbq(...a); } catch (_) {} };
+  /* ================= Meta Pixel ================= */
+  // The base code in index.html loads the pixel and sends PageView. Everything here is wrapped so a
+  // blocked or failing pixel (ad blockers, network) can never affect the page or the order form.
+  // Privacy: only product, quantity, value and currency are sent — never name, phone or address.
+  const pixel = (method, event, params, options) => {
+    try {
+      if (typeof window.fbq !== "function") return;
+      if (options) window.fbq(method, event, params, options); else window.fbq(method, event, params);
+    } catch (_) { /* ignore */ }
+  };
+  const productData = (qty) => ({
+    content_name: PRODUCT,
+    content_ids: [CONTENT_ID],
+    content_type: "product",
+    contents: [{ id: CONTENT_ID, quantity: qty }],
+    num_items: qty,
+    value: PACKS[qty].price,
+    currency: CURRENCY,
+  });
+  // Purchase only for real orders the backend confirmed as saved (res.test === false), once per Order ID —
+  // also across reloads in the same tab. A confirmed TEST order sends the custom event "TestPurchase"
+  // instead, so test orders never count as Purchase conversions.
+  const reportedOrders = new Set();
+  const alreadyReported = (id) => {
+    if (reportedOrders.has(id)) return true;
+    try { if (sessionStorage.getItem("fbq_order_" + id)) return true; } catch (_) { /* storage blocked */ }
+    return false;
+  };
+  const markReported = (id) => {
+    reportedOrders.add(id);
+    try { sessionStorage.setItem("fbq_order_" + id, "1"); } catch (_) { /* storage blocked */ }
+  };
+  const reportOrder = (res, qty) => {
+    try {
+      if (!res || res.status !== "success" || !res.orderId || alreadyReported(res.orderId)) return;
+      markReported(res.orderId);
+      const data = productData(qty);
+      if (res.test === false && MODE === "live") pixel("track", "Purchase", data, { eventID: res.orderId });
+      else if (MODE === "test") pixel("trackCustom", "TestPurchase", data, { eventID: res.orderId });
+    } catch (_) { /* tracking must never affect the order */ }
+  };
 
   document.documentElement.classList.add("js");
   const yr = $("#yr"); if (yr) yr.textContent = new Date().getFullYear();
@@ -52,7 +91,8 @@
     if (img.complete && img.naturalWidth === 0 && img.getAttribute("src")) fail();
   });
 
-  track("track", "ViewContent", { content_name: PRODUCT, content_ids: [CONTENT_ID], content_type: "product", value: PACKS[1].price, currency: CURRENCY });
+  // ViewContent: once per page load (this script runs once).
+  pixel("track", "ViewContent", productData(1));
 
   /* ================= Reveal on scroll ================= */
   const reveals = $$(".reveal");
@@ -130,11 +170,7 @@
     totalVal.classList.remove("bump"); void totalVal.offsetWidth; totalVal.classList.add("bump");
     if (dock) { $("small", dock).textContent = p.label.replace(/ \(.*\)/, ""); $("b", dock).textContent = "SLE " + fmt(p.price); }
   };
-  $$("input[name=pack]", form).forEach((r) => r.addEventListener("change", () => {
-    renderTotal();
-    const p = PACKS[currentQty()];
-    track("track", "AddToCart", { content_name: PRODUCT, content_ids: [CONTENT_ID], content_type: "product", num_items: currentQty(), value: p.price, currency: CURRENCY });
-  }));
+  $$("input[name=pack]", form).forEach((r) => r.addEventListener("change", renderTotal));
 
   // "Order" links: scroll to the form and focus the first field
   $$("[data-cta]").forEach((a) => a.addEventListener("click", (e) => {
@@ -143,12 +179,13 @@
     setTimeout(() => { const n = $("#f-name"); n && n.focus({ preventScroll: true }); }, 650);
   }));
 
-  // InitiateCheckout on first interaction with the form
-  let started = false;
-  form.addEventListener("focusin", () => {
-    if (started) return; started = true;
-    const p = PACKS[currentQty()];
-    track("track", "InitiateCheckout", { content_ids: [CONTENT_ID], num_items: currentQty(), value: p.price, currency: CURRENCY });
+  // InitiateCheckout: once, when the customer actually starts typing their details. Clicking an
+  // "Order" button (which only scrolls and focuses the form) doesn't count.
+  let checkoutStarted = false;
+  form.addEventListener("input", (e) => {
+    if (checkoutStarted || !e.isTrusted || !e.target.closest(".fields") || e.target.name === "website") return;
+    checkoutStarted = true;
+    pixel("track", "InitiateCheckout", productData(currentQty()));
   });
 
   /* ================= Mobile dock ================= */
@@ -278,7 +315,7 @@
       $("#thxIdWrap").hidden = !res.orderId;
       $("#thanks").hidden = false;
       $("#thxClose").focus();
-      track("track", "Lead", { content_name: PRODUCT, value: p.price, currency: CURRENCY });
+      reportOrder(res, qty); // Purchase (live) or TestPurchase (test) — only after the backend confirmed the save
     };
 
     send(payload).then(done).catch((err) => {

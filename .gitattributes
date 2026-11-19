@@ -1,0 +1,6 @@
+# Keep text files with LF endings everywhere (the CSP hash of the inline Meta Pixel script in
+# index.html depends on exact bytes). Images are binary.
+* text=auto eol=lf
+*.webp binary
+*.jpg binary
+*.png binary

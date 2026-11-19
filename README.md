@@ -43,6 +43,24 @@ The original product images (12 `.webp` files + `og.jpg`) are in `assets/img/`. 
 
 If an image file is ever missing, the page shows a labeled "MISSING ASSET" placeholder in its place instead of a broken image.
 
+## Meta Pixel
+
+Pixel **"Magnetic Screen SL"**, ID `1473055054993323`. The official base code is in `<head>` of `index.html`. All other events are sent from `script.js`.
+
+| Event | When | Data sent |
+|---|---|---|
+| `PageView` | Once per page load (base code) | — |
+| `ViewContent` | Once per page load | product, 1 unit, `value: 660`, `currency: SLE` |
+| `InitiateCheckout` | Once, the first time the customer **types** in Name, Phone or Address. Clicking an "Order" button doesn't count. | product, chosen quantity, value, SLE |
+| `Purchase` | **Live mode only**, and only after the backend confirms a **real** order was saved (`status: success`, `test: false`) | product, quantity 1 or 2, `value: 660` or `1200`, `currency: SLE`, `eventID` = Order ID |
+| `TestPurchase` (custom) | **Test mode**, after the backend confirms a test order was saved | same as Purchase. It's a custom event, so it **never counts as a Purchase conversion**. |
+
+- **Purchase only once:** it's never sent for failed orders. It's sent at most once per Order ID, so double clicks, retries, a repeated backend reply or a page reload can't duplicate it. The `eventID` lets Meta deduplicate too, if a server-side Conversions API is added later.
+- **No customer data:** name, phone and address are never passed to Meta. `autoConfig` is turned off, so the pixel doesn't scan buttons or form fields by itself. Also turn off **Automatic advanced matching** in Events Manager (Data sources → your pixel → Settings), so Meta never reads form fields.
+- **Can't break ordering:** every pixel call is wrapped, so a blocked pixel, for example by an ad blocker, can't affect the page or the order form.
+- **Security policy:** the inline base code is allowed by its SHA-256 hash in `vercel.json`. If you edit that `<script>` block, run `node tools/csp-hash.js --write`. `node tools/csp-hash.js` on its own just checks it. `.gitattributes` keeps LF line endings so the hash stays stable.
+- **Checking it after deploying:** use **Events Manager → Test events**, or the Meta Pixel Helper browser extension.
+
 ## Deploying
 
 See [DEPLOY.md](DEPLOY.md) for the GitHub and Vercel steps, the post-deploy checks and the security review of the order endpoint.
@@ -62,6 +80,6 @@ The "Thank you" message appears only after the script confirms the row was saved
 ## Differences from the reference
 
 - Brand wordmark: "Moustiquaire**Magnétique**" became "Magnetic**Screen**", and the "CLAC !" sound became "SNAP!" (translations only).
-- The Meta Pixel was removed. The `track()` calls are still in place and do nothing until you add your own pixel.
+- The reference site's Meta Pixel was removed. This site uses its own pixel, "Magnetic Screen SL" (see Meta Pixel above).
 - On failure, the original still showed the thank-you message after 2.5 s. This version shows it only after the sheet confirms the order was saved, and otherwise shows an error.
 - Orders go to your own Google Sheet (via Apps Script), not the reference site's backend. The thank-you message shows the order number. There is no separate City field: customers type the city as part of the delivery address.

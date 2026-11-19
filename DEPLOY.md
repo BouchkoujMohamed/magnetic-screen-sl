@@ -15,7 +15,7 @@ This is a static site: plain HTML/CSS/JS, with no build step, no server code on 
 
 It also sets caching for the images.
 
-> If you add the Meta Pixel later, the Content-Security-Policy has to allow `connect.facebook.net` and `www.facebook.com`, or the pixel will be blocked.
+> The Content-Security-Policy allows the Meta Pixel: `connect.facebook.net` (script) and `www.facebook.com` (tracking requests). The inline base code is allowed by its SHA-256 hash. After editing that script, run `node tools/csp-hash.js --write`.
 
 ## 1. Create the GitHub repository (you)
 
