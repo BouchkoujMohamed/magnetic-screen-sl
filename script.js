@@ -5,7 +5,7 @@
   // Google Apps Script web app URL (ends in /exec) — see backend/README.md.
   // Empty = DEMO mode: nothing is sent anywhere.
   // This URL is public by design: it can only append validated orders; it grants no access to the sheet.
-  const ORDER_ENDPOINT = "https://script.google.com/macros/s/AKfycbxsQ5PKoO0eg5j4hyCTykdb784hZerc3j_k-DVXK3rXPBUWxXCma9FvCqquibK-gylwzg/exec";
+  const ORDER_ENDPOINT = "https://script.google.com/macros/s/AKfycbyPFaHU_1i9QvleDQf7Xkd25M2Ps6saGVqHWFds-Z5xOxHUUGKhHhNJl5F77DXPn7jI/exec";
   // "test": orders are saved with Status "TEST" and the page shows a test notice.
   // "live": real customer orders (also requires goLive() in the Apps Script). Switch only after approval.
   const ORDER_MODE = "test";
@@ -173,7 +173,6 @@
   const rules = {
     name: (v) => v.trim().length >= 2,
     phone: (v) => /^[2-9]\d{7}$/.test(normPhone(v)), // Sierra Leone: 8 digits after +232 (e.g. 76 123 456)
-    city: (v) => v.trim().length >= 2,
     address: (v) => v.trim().length >= 3,
   };
   const check = (input) => {
@@ -193,7 +192,7 @@
   const msg = $("#formMsg");
   const NOTICES = {
     demo: ["Demo mode: orders are not sent anywhere.", "Demo mode — this order was not sent to any server."],
-    test: ["Test mode: orders are saved to the sheet marked TEST. Real orders are not enabled yet.", "Test mode — saved to the sheet with status TEST."],
+    test: ["Test mode: orders are saved to the sheet with a TEST- order number. Real orders are not enabled yet.", "Test mode — saved to the sheet with a TEST- order number."],
   };
   if (NOTICES[MODE]) {
     $("#demoNote").textContent = NOTICES[MODE][0]; $("#demoNote").hidden = false;
@@ -240,6 +239,7 @@
     not_live: "Online ordering is not open yet. Please try again later.",
     price_changed: "Our prices have been updated. Please refresh the page and place your order again.",
     server: "Sorry, your order could not be saved. Please try again in a moment.",
+    sheet_config: "Sorry, we can't take orders right now because of a technical problem. Please try again later.",
   };
 
   form.addEventListener("submit", (e) => {
@@ -254,13 +254,12 @@
     const p = PACKS[qty];
     const phone = "+232" + normPhone(form.elements.phone.value);
     const name = form.elements.name.value.trim();
-    const city = form.elements.city.value.trim();
     const address = form.elements.address.value.trim();
-    const sig = JSON.stringify([qty, name, phone, city, address]);
+    const sig = JSON.stringify([qty, name, phone, address]);
     if (sig !== reqSig) { reqSig = sig; reqKey = newKey(); }
     // Only what the server needs; it computes package label and price itself.
     // currency/total are sent only so the server can reject a stale page showing old prices.
-    const payload = { key: reqKey, test: MODE !== "live", name, phone, city, address, quantity: qty, currency: CURRENCY, total: p.price, website: "" };
+    const payload = { key: reqKey, test: MODE !== "live", name, phone, address, quantity: qty, currency: CURRENCY, total: p.price, website: "" };
 
     inFlight = true;
     btn.disabled = true;

@@ -58,7 +58,7 @@ Every later push to `main` redeploys the site automatically. Pushes to other bra
 
 - **Page:** it loads with all images, and the "Test mode" notice shows under the form.
 - **Hidden files:** `https://<domain>/backend/Code.gs` and `/README.md` return **404**.
-- **Test order:** send **one** order marked TEST from the live domain (name `TEST ORDER - Vercel`). It should appear in the Orders tab with Status `TEST`.
+- **Test order:** send **one** order marked TEST from the live domain (name `TEST ORDER - Vercel`). It should appear in the Orders tab with a `TEST-` Order ID.
 - **Phone check:** test on a real phone, both the layout and the sticky "Order" bar.
 
 ## 5. After the first deploy
@@ -83,10 +83,10 @@ The Apps Script URL is public by design: anyone can see it in `script.js`. It gi
 
 | Risk | What protects against it | What's left |
 |---|---|---|
-| Malformed or edited requests | The server checks every field again: name length, `+232` plus 8 digits, city, address, and quantity 1 or 2. It sets prices itself and refuses a mismatched currency or total. | None for the format of the data. The server can't tell whether a person or phone number is real; your confirmation call does that. |
+| Malformed or edited requests | The server checks every field again: name length, `+232` plus 8 digits, address, and quantity 1 or 2. It sets prices itself and refuses a mismatched currency or total. | None for the format of the data. The server can't tell whether a person or phone number is real; your confirmation call does that. |
 | Accidental double orders | The button is locked while sending. Each order carries a request key, and the server returns the original order for a repeated key (remembered for 6 hours). A lock means simultaneous orders can't collide. | A customer who reloads the page and orders again creates a new row. Usually that's legitimate; spot it by phone number. |
 | Spam bots / floods | A hidden field catches naive bots, and every order is checked by the server. | **No rate limit and no CAPTCHA.** A script can create many fake but valid-looking rows. Possible upgrades (not implemented): a per-phone limit, such as 3 orders per number per day, in `Code.gs`, or Cloudflare Turnstile. |
 | Spreadsheet formula injection | Text starting with `=`, `+`, `-` or `@` is stored as plain text. | None. |
-| Fake "test" orders after going live | They're saved with Status `TEST`, so they're easy to filter out. | Some noise in the sheet. This can be tightened so the script refuses test orders once live. |
+| Fake "test" orders after going live | Their Order ID starts with `TEST-`, so they're easy to filter out. | Some noise in the sheet. This can be tightened so the script refuses test orders once live. |
 | Data exposure | Customer data exists only in your Google Sheet, never on Vercel or GitHub. | Keep the sheet's sharing restricted. |
 | Quotas | Google limits Apps Script, including how many requests can run at the same time (about 30). | A flood could slow down or block real orders. A rate limit would help. |
