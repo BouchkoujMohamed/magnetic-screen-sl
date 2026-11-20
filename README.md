@@ -45,7 +45,7 @@ If an image file is ever missing, the page shows a labeled "MISSING ASSET" place
 
 ## Meta Pixel
 
-Pixel **"Magnetic Screen SL"**, ID `1473055054993323`. The official base code is in `<head>` of `index.html`. All other events are sent from `script.js`.
+Pixel **"Magnetic Screen SL"**, ID `1460867412156306`. The official base code is in `<head>` of `index.html`. All other events are sent from `script.js`.
 
 | Event | When | Data sent |
 |---|---|---|
