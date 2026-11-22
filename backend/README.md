@@ -77,9 +77,10 @@ Real orders need **two switches**, so they can't start by accident.
 | | Website (`script.js`) | Apps Script |
 |---|---|---|
 | Test (default) | `ORDER_MODE = "test"`. Orders are marked as tests, and the page shows a "Test mode" notice. | Saves test orders with a `TEST-` Order ID. Refuses real orders. |
-| Live | `ORDER_MODE = "live"` | Run **`goLive()`** once in the editor. |
+| Live | `ORDER_MODE = "live"` | Run **`goLive()`** once in the editor. Test orders are still accepted, so the site never fails while it switches. |
+| Live, test orders closed | `ORDER_MODE = "live"` | After the live site is confirmed, run **`closeTestOrders()`**. The endpoint then refuses `test:true` orders (`test_closed`), so nobody can add `TEST-` rows to the live table. A stale test-mode page shows "This page has been updated. Please refresh…". |
 
-To stop real orders at any time without redeploying, run **`goTestOnly()`**.
+`closeTestOrders()` refuses to run unless live orders are on, because otherwise no orders at all would be accepted. To stop real orders at any time without redeploying, run **`goTestOnly()`**. It also re-opens test orders. The health check shows both switches: `"live"` and `"testOrders"`.
 
 ## Checking where orders go
 
@@ -105,3 +106,24 @@ Go to **Deploy → Manage deployments → ✏️ Edit**, set **Version: New vers
 - **Public URL:** anyone who finds it can send fake orders that pass validation. The confirmation call is your filter. If spam becomes a problem, a rate limit or CAPTCHA can be added.
 - **Speed:** Apps Script usually replies in 1–5 seconds. The page waits up to 25 seconds before showing an error.
 - **Usage limits:** Google limits Apps Script per day and allows about 30 requests at once. A normal landing page stays far below that.
+
+## Data retention (12 months)
+
+The privacy notice promises that customers' **name, phone number and address are kept for 12 months from the order date**, unless the law requires longer. After that they are deleted. The order number, quantity and price may be kept for sales records.
+
+**Where personal data is kept:** only in columns B–D (`Name`, `phone`, `adresse`) of the `Orders` tab. The hidden `_order_log`, the script's memory and its logs, and the Meta Pixel never receive name, phone or address. The order date comes from the Order ID (`MS-YYMMDD-NNNN`).
+
+**Monthly check (read-only):** in Apps Script, run **`retentionReport`**. The log lists:
+- the rows past 12 months that still hold personal details
+- rows with personal details but no recognisable Order ID, to check by hand
+
+It changes nothing.
+
+**Clearing expired rows:** for each listed row, clear only **B, C and D** (Name, phone, adresse). Keep the Order ID, Quantité and Price, and don't delete the row, so the sheet's design and later rows stay in place. An automatic clean-up function can be added later if you prefer.
+
+**Version history:** Google Sheets keeps old versions of a file, and clearing cells doesn't remove the values from **File → Version history**. To make sure deleted details are really gone, once a year:
+1. **File → Make a copy.** The copy has no version history.
+2. Point `SPREADSHEET_ID` in `Code.gs` to the copy and publish a new version.
+3. Delete the old file and empty the Drive trash.
+
+Also delete any downloaded exports and WhatsApp messages older than 12 months that contain customer details.

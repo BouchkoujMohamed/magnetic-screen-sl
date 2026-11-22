@@ -336,3 +336,11 @@ legend{font-weight:800;color:var(--navy);font-size:15px;margin-bottom:10px;paddi
 img.ph{background:repeating-linear-gradient(45deg,#eef2f9 0 12px,#e4eaf5 12px 24px)}
 /* Demo-mode notice under the order form */
 .demo-note{margin:10px 0 0;padding:8px 12px;border:1px dashed var(--orange);border-radius:10px;background:#fff7ec;color:#8a4b00;font-size:12.5px;text-align:center}
+
+/* ---------- Privacy notice page (privacy.html) ---------- */
+.privacy h1{font-size:clamp(26px,6vw,36px);color:var(--navy);margin-bottom:.2em}
+.privacy h2{font-size:18px;color:var(--navy);margin:1.6em 0 .4em}
+.privacy a{color:var(--navy-2)}
+.privacy code{background:var(--soft);padding:1px 5px;border-radius:4px;font-size:.92em}
+.form-privacy{text-align:center;font-size:12px;color:var(--muted);margin:6px 0 0}
+.form-privacy a,.foot a{color:inherit}

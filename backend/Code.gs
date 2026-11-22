@@ -22,6 +22,8 @@
  *    written, then marked "saved". A retry with the same request key completes or returns it —
  *    never a second row, even after a partial failure.
  *  - Real (non-test) orders are refused until goLive() is run. Test orders get a "TEST-" Order ID.
+ *  - After launch, closeTestOrders() makes the endpoint refuse test:true orders, so nobody can add
+ *    TEST rows to the live table. goTestOnly() re-opens them (and stops real orders).
  */
 
 // Destination spreadsheet: the ID is the long code in its URL (.../spreadsheets/d/<ID>/edit).
@@ -30,7 +32,7 @@ const SHEET_NAME = 'Orders';
 const HEADER_ROW = 2;      // row 1 is the decorative title
 const FIRST_DATA_ROW = 3;  // orders start here
 const LOG_SHEET_NAME = '_order_log';
-const VERSION = '2026-11-19-header-row-2'; // shown by the health check, to confirm which code is deployed
+const VERSION = '2026-11-22-test-lock'; // shown by the health check, to confirm which code is deployed
 const TIMEZONE = 'Africa/Freetown';
 const CURRENCY = 'SLE';
 
@@ -60,7 +62,8 @@ function doPost(e) {
 
 // Health check: open the /exec URL in a browser to confirm the deployment and its version.
 function doGet() {
-  return json_({ status: 'ok', service: 'magnetic-screen-orders', version: VERSION, live: isLive_() });
+  return json_({ status: 'ok', service: 'magnetic-screen-orders', version: VERSION, live: isLive_(),
+    testOrders: testOrdersClosed_() ? 'closed' : 'open' });
 }
 
 /* ---------------- Order handling ---------------- */
@@ -71,6 +74,9 @@ function handleOrder_(data) {
   const isTest = data.test === true;
   if (!isTest && !isLive_()) {
     return { status: 'error', code: 'not_live', message: 'Live orders are not enabled yet.' };
+  }
+  if (isTest && testOrdersClosed_()) {
+    return { status: 'error', code: 'test_closed', message: 'Test orders are closed.' };
   }
 
   const key = String(data.key || '');
@@ -305,6 +311,10 @@ function isLive_() {
   return PropertiesService.getScriptProperties().getProperty('LIVE') === 'true';
 }
 
+function testOrdersClosed_() {
+  return PropertiesService.getScriptProperties().getProperty('TEST_ORDERS') === 'closed';
+}
+
 /* ---------------- Admin functions (run from the editor) ---------------- */
 
 // Run once (safe to run again). Checks the existing "Orders" tab WITHOUT changing it, and creates the
@@ -334,17 +344,57 @@ function setup() {
     'Tab "' + SHEET_NAME + '" (gid ' + orders.getSheetId() + '): headers found in row ' + HEADER_ROW + ', ' +
     existing + ' existing orders, next order goes to row ' + nextFreeRow_(orders) + '. ' +
     'Hidden log tab "' + LOG_SHEET_NAME + '": ' + Math.max(0, log.getLastRow() - 1) + ' entries. ' +
-    'Live orders enabled: ' + isLive_());
+    'Live orders enabled: ' + isLive_() + '. Test orders: ' + (testOrdersClosed_() ? 'closed' : 'open'));
+}
+
+// READ-ONLY retention check (privacy notice: personal details are kept 12 months from the order date).
+// Lists the Orders rows whose order date — taken from the Order ID (MS-/TEST-YYMMDD-NNNN) — is more than
+// RETENTION_MONTHS ago and that still hold a name, phone or address. Changes nothing.
+const RETENTION_MONTHS = 12;
+function retentionReport() {
+  const ss = spreadsheet_();
+  const orders = ss.getSheetByName(SHEET_NAME);
+  if (!orders) throw new Error('No tab named "' + SHEET_NAME + '". Nothing was changed.');
+  const cutoff = new Date();
+  cutoff.setMonth(cutoff.getMonth() - RETENTION_MONTHS);
+  const cutoffKey = Utilities.formatDate(cutoff, TIMEZONE, 'yyMMdd');
+  const rows = readRows_(orders, FIRST_DATA_ROW, HEADERS.length);
+  const expired = [], unknownDate = [];
+  rows.forEach((row, i) => {
+    const hasPersonal = row[1] !== '' || row[2] !== '' || row[3] !== '';
+    if (!hasPersonal) return;
+    const m = /^(?:MS|TEST)-(\d{6})-\d+$/.exec(row[0]);
+    if (!m) { unknownDate.push(FIRST_DATA_ROW + i); return; }
+    if (m[1] < cutoffKey) expired.push(FIRST_DATA_ROW + i + ' (' + row[0] + ')');
+  });
+  console.log('Retention report — cutoff: orders before ' + Utilities.formatDate(cutoff, TIMEZONE, 'yyyy-MM-dd') +
+    ' (' + RETENTION_MONTHS + ' months). Rows with personal details past the cutoff: ' + expired.length +
+    (expired.length ? ' → rows ' + expired.join(', ') : '') + '. Rows with personal details but no recognisable ' +
+    'Order ID date (check by hand): ' + unknownDate.length + (unknownDate.length ? ' → rows ' + unknownDate.join(', ') : '') +
+    '. Nothing was changed.');
+  return { expired: expired, unknownDate: unknownDate };
 }
 
 // Accept real customer orders. Run only after the integration is approved.
+// Test orders stay open until closeTestOrders(), so the site never fails while it switches to live.
 function goLive() {
   PropertiesService.getScriptProperties().setProperty('LIVE', 'true');
-  console.log('Live orders ENABLED.');
+  console.log('Live orders ENABLED. Test orders: ' + (testOrdersClosed_() ? 'closed' : 'open') +
+    ' — run closeTestOrders() once the website is confirmed in live mode.');
 }
 
-// Back to test-only: real orders are refused, test orders still accepted.
+// After launch: refuse test:true orders so no TEST rows can be added to the live table.
+// Only allowed while live; otherwise the endpoint would accept no orders at all.
+function closeTestOrders() {
+  if (!isLive_()) throw new Error('Run goLive() first. Closing test orders while not live would block every order. Nothing was changed.');
+  PropertiesService.getScriptProperties().setProperty('TEST_ORDERS', 'closed');
+  console.log('Test orders CLOSED. Live orders enabled: true.');
+}
+
+// Back to test-only: real orders are refused, test orders are accepted again.
 function goTestOnly() {
-  PropertiesService.getScriptProperties().setProperty('LIVE', 'false');
-  console.log('Live orders DISABLED (test orders only).');
+  const props = PropertiesService.getScriptProperties();
+  props.setProperty('LIVE', 'false');
+  props.setProperty('TEST_ORDERS', 'open');
+  console.log('Live orders DISABLED. Test orders: open.');
 }

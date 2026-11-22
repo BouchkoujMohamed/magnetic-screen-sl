@@ -275,6 +275,7 @@
     busy: "Our system is busy. Please wait a moment and try again.",
     not_live: "Online ordering is not open yet. Please try again later.",
     price_changed: "Our prices have been updated. Please refresh the page and place your order again.",
+    test_closed: "This page has been updated. Please refresh the page and place your order again.",
     server: "Sorry, your order could not be saved. Please try again in a moment.",
     sheet_config: "Sorry, we can't take orders right now because of a technical problem. Please try again later.",
   };

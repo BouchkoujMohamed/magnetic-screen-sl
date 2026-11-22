@@ -60,6 +60,7 @@ Pixel **"Magnetic Screen SL - Sales"**, ID `2175936113011476`. The official base
 - **Can't break ordering:** every pixel call is wrapped, so a blocked pixel, for example by an ad blocker, can't affect the page or the order form.
 - **Security policy:** the inline base code is allowed by its SHA-256 hash in `vercel.json`. If you edit that `<script>` block, run `node tools/csp-hash.js --write`. `node tools/csp-hash.js` on its own just checks it. `.gitattributes` keeps LF line endings so the hash stays stable.
 - **Checking it after deploying:** use **Events Manager → Test events**, or the Meta Pixel Helper browser extension.
+- **Privacy notice:** [`privacy.html`](privacy.html) is linked under the order form and in the footer. It explains what order data is collected and how the pixel is used. It has no scripts and no pixel.
 
 ## Deploying
 
