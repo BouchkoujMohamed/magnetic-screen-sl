@@ -45,7 +45,7 @@ If an image file is ever missing, the page shows a labeled "MISSING ASSET" place
 
 ## Meta Pixel
 
-Pixel **"Magnetic Screen SL"**, ID `1460867412156306`. The official base code is in `<head>` of `index.html`. All other events are sent from `script.js`.
+Pixel **"Magnetic Screen SL - Sales"**, ID `2175936113011476`. The official base code is in `<head>` of `index.html`. All other events are sent from `script.js`.
 
 | Event | When | Data sent |
 |---|---|---|
@@ -80,6 +80,6 @@ The "Thank you" message appears only after the script confirms the row was saved
 ## Differences from the reference
 
 - Brand wordmark: "Moustiquaire**Magnétique**" became "Magnetic**Screen**", and the "CLAC !" sound became "SNAP!" (translations only).
-- The reference site's Meta Pixel was removed. This site uses its own pixel, "Magnetic Screen SL" (see Meta Pixel above).
+- The reference site's Meta Pixel was removed. This site uses its own pixel, "Magnetic Screen SL - Sales" (see Meta Pixel above).
 - On failure, the original still showed the thank-you message after 2.5 s. This version shows it only after the sheet confirms the order was saved, and otherwise shows an error.
 - Orders go to your own Google Sheet (via Apps Script), not the reference site's backend. The thank-you message shows the order number. There is no separate City field: customers type the city as part of the delivery address.
