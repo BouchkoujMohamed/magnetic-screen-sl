@@ -8,7 +8,7 @@
   const ORDER_ENDPOINT = "https://script.google.com/macros/s/AKfycbyPFaHU_1i9QvleDQf7Xkd25M2Ps6saGVqHWFds-Z5xOxHUUGKhHhNJl5F77DXPn7jI/exec";
   // "test": orders are saved with Status "TEST" and the page shows a test notice.
   // "live": real customer orders (also requires goLive() in the Apps Script). Switch only after approval.
-  const ORDER_MODE = "test";
+  const ORDER_MODE = "live";
   const MODE = !ORDER_ENDPOINT ? "demo" : ORDER_MODE === "live" ? "live" : "test";
   const DEMO = MODE === "demo";
 
